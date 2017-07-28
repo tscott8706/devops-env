@@ -1,0 +1,125 @@
+# Give domain to Docker container?
+# Quick install for Docker
+
+version: "2"
+services:
+    jenkins:
+        image: jenkins
+        container_name: jenkins
+        restart: always
+        ports:
+            - 8080:8080
+            - 50000:50000
+        networks:
+            devops_playground:
+                ipv4_address: 10.10.10.1
+        environment:
+            - JAVA_OPTS=-Duser.timezone=CST
+        volumes:
+            - jenkins-volume:/var/jenkins_home
+
+    svn:
+        image: krisdavison/svn
+        container_name: svn-server
+        restart: always
+        ports:
+            - 80:80
+        networks:
+            devops_playground:
+                ipv4_address: 10.10.10.2
+        # TODO
+        #volumes:
+
+    bugzilla:
+        image: bugzilla
+        container_name: bugzilla
+        restart: always
+        ports:
+            - "5000:80"
+            - "5001:22"
+            - "5002:5900"
+
+    postgres:
+        image: postgres:alpine
+        container_name: postgres
+        environment:
+            - POSTGRES_USER=reviewboard
+
+
+    memcached:
+        image: memcached:alpine
+        container_name: memcached
+
+    reviewboard:
+        image: ikatson/reviewboard
+        volumes:
+            - /root/.ssh
+            - /media
+        depends_on:
+            - postgres
+            - memcached
+        environment:
+            - PGHOST=postgres
+            - MEMCACHED=memcached:11211
+            - WAIT_FOR_POSTGRES=true
+        ports:
+            - 8000:8000
+
+    mysql:
+        image: mysql:latest
+        environment:
+            - MYSQL_ROOT_PASSWORD=root-secret
+            - MYSQL_DATABASE=agilefant
+            - MYSQL_USER=agilefant
+            - MYSQL_PASSWORD=my-secret
+
+    agilefant:
+        image: kcyeu/agilefant
+        container_name: agilefant
+        restart: always
+        ports:
+            - 7000:8080
+        depends_on:
+            - mysql
+
+    pypi:
+        #-h pypi.local
+        image: codekoala/pypi
+        container_name: pypi
+        restart: always
+        ports:
+            - 9000:80
+        voumes:
+            - /sr/pypi:/srv/pypi:rw
+
+    #backup:
+        #TODO
+
+    #nginx:
+        #TODO
+
+    #ansible:
+        #TODO
+
+    #client1:
+        #TODO
+
+    #client2:
+        #TODO
+
+    #client3:
+        #TODO
+
+volumes:
+    jenkins-volume:
+        external: true
+
+networks:
+    devops_playground:
+        driver: bridge
+        ipam:
+            driver: default
+            config:
+                - subnet:  10.10.10.0/24
+                  gateway: 10.10.10.254
+
