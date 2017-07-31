@@ -3,58 +3,58 @@
 
 version: "2"
 services:
-    jenkins:
-        image: jenkins
-        container_name: jenkins
-        restart: always
-        ports:
-            - 8080:8080
-            - 50000:50000
-        networks:
-            devops_playground:
-                ipv4_address: 10.10.10.1
-        environment:
-            - JAVA_OPTS=-Duser.timezone=CST
-        volumes:
-            - jenkins-volume:/var/jenkins_home
-
-    svn:
-        image: krisdavison/svn
-        container_name: svn-server
-        restart: always
-        ports:
-            - 80:80
-        networks:
-            devops_playground:
-                ipv4_address: 10.10.10.2
-        # TODO
-        #volumes:
-
-    bugzilla:
-        image: bugzilla
-        container_name: bugzilla
-        restart: always
-        ports:
-            - "5000:80"
-            - "5001:22"
-            - "5002:5900"
+    #    jenkins:
+    #        image: jenkins
+    #        container_name: jenkins
+    #        restart: always
+    #        ports:
+    #            - 7080:8080
+    #            - 50000:50000
+    #        networks:
+    #            network:
+    #                ipv4_address: 10.10.10.1
+    #        environment:
+    #            - JAVA_OPTS=-Duser.timezone=CST
+    #        volumes:
+    #            - jenkins-data:/var/jenkins_home
+    #
+    #    svn:
+    #        image: krisdavison/svn-server:v2.0
+    #        container_name: svn
+    #        restart: always
+    #        ports:
+    #            - 5000:80
+    #        networks:
+    #            network:
+    #                ipv4_address: 10.10.10.2
+    #        volumes:
+    #            - svn-data:/home/svn
+    #        command: /startup.sh
 
     postgres:
         image: postgres:alpine
         container_name: postgres
+        restart: always
         environment:
             - POSTGRES_USER=reviewboard
-
+        volumes:
+            - pg-data:/var/lib/postgresql/data
+        networks:
+            network:
+                ipv4_address: 10.10.10.3
 
     memcached:
         image: memcached:alpine
         container_name: memcached
+        restart: always
+        networks:
+            network:
+                ipv4_address: 10.10.10.4
 
     reviewboard:
         image: ikatson/reviewboard
-        volumes:
-            - /root/.ssh
-            - /media
+        container_name: reviewboard
+        restart: always
         depends_on:
             - postgres
             - memcached
@@ -64,58 +64,79 @@ services:
             - WAIT_FOR_POSTGRES=true
         ports:
             - 8000:8000
+        volumes:
+            - rb-ssh:/root/.ssh
+            - rb-media:/media
+        networks:
+            network:
+                ipv4_address: 10.10.10.5
+
+    redmine:
+        image: redmine
+        container_name: redmine
+        restart: always
+        ports:
+            - 8080:3000
+        environment:
+            REDMINE_DB_MYSQL: mysql
+            REDMINE_DB_PASSWORD: example
 
     mysql:
-        image: mysql:latest
+        image: mysql:5.7
+        container_name: mysql
+        restart: always
         environment:
-            - MYSQL_ROOT_PASSWORD=root-secret
-            - MYSQL_DATABASE=agilefant
-            - MYSQL_USER=agilefant
-            - MYSQL_PASSWORD=my-secret
+            MYSQL_ROOT_PASSWORD: example
+            MYSQL_DATABASE: redmine
+        volumes:
+            - mysql-data:/var/lib/mysql
 
-    agilefant:
-        image: kcyeu/agilefant
-        container_name: agilefant
-        restart: always
-        ports:
-            - 7000:8080
-        depends_on:
-            - mysql
-
-    pypi:
-        #-h pypi.local
-        image: codekoala/pypi
-        container_name: pypi
-        restart: always
-        ports:
-            - 9000:80
-        voumes:
-            - /sr/pypi:/srv/pypi:rw
-
-    #backup:
-        #TODO
-
-    #nginx:
-        #TODO
-
-    #ansible:
-        #TODO
-
-    #client1:
-        #TODO
-
-    #client2:
-        #TODO
-
-    #client3:
-        #TODO
+#    pypi:
+#        #-h pypi.local
+#        image: codekoala/pypi
+#        container_name: pypi
+#        restart: always
+#        ports:
+#            - 9000:80
+#        volumes:
+#            - /sr/pypi:/srv/pypi:rw
+#
+#    #backup:
+#        #TODO
+#
+#    #nginx:
+#        #TODO
+#
+#    #ansible:
+#        #TODO
+#
+#    #client1:
+#        #TODO
+#
+#    #client2:
+#        #TODO
+#
+#    #client3:
+#        #TODO
 
 volumes:
-    jenkins-volume:
+    jenkins-data:
+        external: true
+    svn-data:
+        external: true
+    rb-ssh:
+        external: true
+    rb-media:
+        external: true
+    pg-data:
+        external: true
+    mysql-data:
+        external: true
+    redmine-data:
         external: true
 
 networks:
-    devops_playground:
+    network:
         driver: bridge
         ipam:
             driver: default
